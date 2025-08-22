@@ -9,6 +9,12 @@ from pprint import pprint
 class diff_get:
     
     def __init__(self,s0,s1,loc=None,path=None,deep_diff_kw=None,ignore_added=False):
+
+        assert type(s0) is type(s1), f'bad types!'
+        if isinstance(s0,(tuple,list)) and isinstance(s1,(tuple,list)):
+            print(f'converting lists -> dict')
+            s0 = {i:v for i,v in enumerate(s0)}
+            s1 = {i:v for i,v in enumerate(s1)}
         self.s0 = s0
         self.s1 = s1
         self.ignore_added = ignore_added
@@ -39,12 +45,22 @@ class diff_get:
         s1k = set(self.s1)
         sa = set.intersection(s0k,s1k)
         return sa
+    
+    def __iter__(self):
+        return self.keys()
 
-    def __dir__(self):
-        ol = super().__dir__()
-        out = list(self.keys())
-        out.extend(ol)
-        return out
+    def _ipython_key_completions_(self):
+        """
+        Returns the keys that IPython should suggest for tab completion
+        when accessing items using obj[key].
+        """
+        return list(self.keys())
+
+    # def __dir__(self):
+    #     ol = super().__dir__()
+    #     out = list(self.keys())
+    #     out.extend(ol)
+    #     return out
 
     @property
     def location(self):
@@ -165,7 +181,7 @@ class diff_get:
                 print(f'-{p:<100}:\n\t[{", ".join(key_suffixes)}]')
 
         # 4. Loop through the groups of parent keys and print the differences side by side
-        print(f"{'KEY':<50} | {'s0':^30} | {'s1':^30} | {'% DIFF':>10}")
+        print(f"{'KEY':<50} | {'s0':^30} | {'s1':^30} | {'DIFF':>10} | {'% DIFF':>10}")
         print('-' * 145)
         threshold = 1.0 / (10 ** self.deep_diff_kw.get('significant_digits', 3))
         for p, _ in sorted_parents:
@@ -193,15 +209,18 @@ class diff_get:
                     v1_num = float(v1)
                 except (ValueError, TypeError):
                     pass
+                diff = '-'
                 if v0_num is not None and v1_num is not None:
                     try:
                         if v0_num == 0 and v1_num == 0:
                             pct = 0.0
                         elif v0_num == 0:
                             pct = float('inf')
+                            diff = pct
                         else:
-                            pct = abs((v1_num - v0_num) / v0_num)
-                        pct_diff = f"| {pct:10.3%}"
+                            diff = (v1_num - v0_num)
+                            pct = abs( diff/ v0_num)
+                        pct_diff = f"{pct:10.3%}"
                     except Exception:
                         pass
                 v0s = json.dumps(v0, ensure_ascii=False) if not isinstance(v0, str) else v0
@@ -210,12 +229,12 @@ class diff_get:
                     if group_print is False:
                         print(f"\nGROUP: {p}")
                         group_print = True
-                    print(f" >{key:<50} | {v0s:^30} | {v1s:^30} {pct_diff:>10}")
+                    print(f" >{key:<50} | {v0s:^30} | {v1s:^30} | {diff:>14.4f} |{pct_diff:>10}")
                 elif pct is None and v0 != v1:
                     if group_print is False:
                         print(f"\nGROUP: {p}")
                         group_print = True                    
-                    print(f" >{key:<50} | {v0s:^30} | {v1s:^30}")
+                    print(f" >{key:<50} | {v0s:^30} | {v1s:^30} | {'-':^14} | {'-':^10}")
 
     def diff_summary(self,file=None,top=50,bytes=None):
 
