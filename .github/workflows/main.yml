@@ -7,6 +7,12 @@ on:
       - '**/*.py'
       - 'pyproject.toml'
       - 'requirements*.txt'
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for manual trigger'
+        required: false
+        default: 'Manual release'
 
 permissions:
   contents: write
@@ -39,14 +45,14 @@ jobs:
       - name: Test installation
         run: |
           python -c "import diffgetr; print('Package imported successfully')"
-          diffgetr --help || echo "CLI help command executed"
+          python -c "from diffgetr.diff_get import main; print('CLI function available')"
       
       - name: Run unit tests
         run: |
           pytest tests/ -v
       
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: dist
           path: dist/
@@ -59,7 +65,7 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Download build artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: dist
           path: dist/
@@ -107,7 +113,7 @@ jobs:
           "
       
       - name: Download build artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: dist
           path: dist/
