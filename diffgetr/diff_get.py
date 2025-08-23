@@ -6,20 +6,25 @@ import re
 import argparse
 from pprint import pprint
 
-class diff_get:
-    
-    def __init__(self,s0,s1,loc=None,path=None,deep_diff_kw=None,ignore_added=False):
 
-        assert type(s0) is type(s1), f'bad types!'
-        if isinstance(s0,(tuple,list)) and isinstance(s1,(tuple,list)):
-            print(f'converting lists -> dict')
-            s0 = {i:v for i,v in enumerate(s0)}
-            s1 = {i:v for i,v in enumerate(s1)}
+class diff_get:
+
+    def __init__(
+        self, s0, s1, loc=None, path=None, deep_diff_kw=None, ignore_added=False
+    ):
+
+        assert type(s0) is type(s1), f"bad types!"
+        if isinstance(s0, (tuple, list)) and isinstance(s1, (tuple, list)):
+            print(f"converting lists -> dict")
+            s0 = {i: v for i, v in enumerate(s0)}
+            s1 = {i: v for i, v in enumerate(s1)}
         self.s0 = s0
         self.s1 = s1
         self.ignore_added = ignore_added
         if deep_diff_kw is None:
-            self.deep_diff_kw = dict(ignore_numeric_type_changes=True,significant_digits =3)
+            self.deep_diff_kw = dict(
+                ignore_numeric_type_changes=True, significant_digits=3
+            )
         else:
             self.deep_diff_kw = deep_diff_kw
 
@@ -30,22 +35,29 @@ class diff_get:
         if path is not None:
             self.loc.append(path)
         else:
-            self.loc=['root']
-        
-    def __getitem__(self,key):
+            self.loc = ["root"]
+
+    def __getitem__(self, key):
         if key in self.s0 and key in self.s1:
-            return diff_get(self.s0[key],self.s1[key],path=key,loc=self.loc.copy(),ignore_added=self.ignore_added,deep_diff_kw=self.deep_diff_kw)
+            return diff_get(
+                self.s0[key],
+                self.s1[key],
+                path=key,
+                loc=self.loc.copy(),
+                ignore_added=self.ignore_added,
+                deep_diff_kw=self.deep_diff_kw,
+            )
         else:
-            #self.diff_data(sys.stdout,bytes=False)
+            # self.diff_data(sys.stdout,bytes=False)
             self.diff_summary()
-            raise KeyError(f'{self.location} | key missing: {key}')
-            
+            raise KeyError(f"{self.location} | key missing: {key}")
+
     def keys(self):
         s0k = set(self.s0)
         s1k = set(self.s1)
-        sa = set.intersection(s0k,s1k)
+        sa = set.intersection(s0k, s1k)
         return sa
-    
+
     def __iter__(self):
         return self.keys()
 
@@ -64,53 +76,66 @@ class diff_get:
 
     @property
     def location(self):
-        return '.'.join(self.loc)
-    
+        return ".".join(self.loc)
+
     def __repr__(self):
-        return f'diff[{self.location}]'
+        return f"diff[{self.location}]"
 
     def __str__(self):
         fil = io.BytesIO()
-        out = self.diff_summary(fil,top=10)
+        out = self.diff_summary(fil, top=10)
         fil.seek(0)
-        buff = fil.getvalue().decode('utf-8')
+        buff = fil.getvalue().decode("utf-8")
         return buff
 
     def print_here(self):
-        d0 = {k:"{...}" if isinstance(v,dict) else v if not isinstance(v,(list,tuple)) else "[...]" for k,v in self.s0.items() }
-        d1 = {k:"{...}" if isinstance(v,dict) else v if not isinstance(v,(list,tuple)) else "[...]" for k,v in self.s1.items() }
-        
-        pprint(d0,indent=2)
-        pprint(d1,indent=2)
+        d0 = {
+            k: (
+                "{...}"
+                if isinstance(v, dict)
+                else v if not isinstance(v, (list, tuple)) else "[...]"
+            )
+            for k, v in self.s0.items()
+        }
+        d1 = {
+            k: (
+                "{...}"
+                if isinstance(v, dict)
+                else v if not isinstance(v, (list, tuple)) else "[...]"
+            )
+            for k, v in self.s1.items()
+        }
+
+        pprint(d0, indent=2)
+        pprint(d1, indent=2)
 
     @property
     def diff_obj(self) -> deepdiff.DeepDiff:
-        df = deepdiff.DeepDiff(self.s0,self.s1, **self.deep_diff_kw)
+        df = deepdiff.DeepDiff(self.s0, self.s1, **self.deep_diff_kw)
         if self.ignore_added:
             for k in list(df):
-                if 'added' in k:
+                if "added" in k:
                     df.pop(k)
         return df
 
-
-    def diff_all(self,indent=2,file=None):
+    def diff_all(self, indent=2, file=None):
         df = self.diff_obj
-        
+
         if file is None:
             file = sys.stdout
             bytes = False
 
-        title = f'{self.location} diffing data\n\n'
-        file.write(title.encode('utf-8') if bytes else title)        
-        for k,dc in df.items():
+        title = f"{self.location} diffing data\n\n"
+        file.write(title.encode("utf-8") if bytes else title)
+        for k, dc in df.items():
             if dc:
-                tit = f'\nDIFF CATEGORY: {k.upper()}\n'
-                file.write(tit.encode('utf-8') if bytes else tit )
-                pprint(dc,stream=file,indent=indent)
+                tit = f"\nDIFF CATEGORY: {k.upper()}\n"
+                file.write(tit.encode("utf-8") if bytes else tit)
+                pprint(dc, stream=file, indent=indent)
 
     def diff_sidebyside(self):
         # 1. Convert each dictionary to global key format (key1.key2[i].key3 = value)
-        def flatten(d, parent_key='root', sep='.', out=None):
+        def flatten(d, parent_key="root", sep=".", out=None):
             if out is None:
                 out = {}
             if isinstance(d, dict):
@@ -138,10 +163,10 @@ class diff_get:
         # 3. Sort the differences by common parent key by amount and number of differences
         def parent_key(key):
             # Remove last .segment or [i]
-            if '[' in key and key.endswith(']'):
-                return key[:key.rfind('[')]
-            if '.' in key:
-                return key[:key.rfind('.')]
+            if "[" in key and key.endswith("]"):
+                return key[: key.rfind("[")]
+            if "." in key:
+                return key[: key.rfind(".")]
             return key
 
         diff_keys = list({k for k in both if flat0[k] != flat1[k]})
@@ -160,10 +185,10 @@ class diff_get:
                 if p not in missing_by_parent:
                     missing_by_parent[p] = []
                 missing_by_parent[p].append(key)
-            
-            print('MISSING KEYS:')
+
+            print("MISSING KEYS:")
             for p, keys in sorted(missing_by_parent.items(), key=lambda x: -len(x[1])):
-                key_suffixes = [k.replace(p, "").lstrip('.') for k in keys]
+                key_suffixes = [k.replace(p, "").lstrip(".") for k in keys]
                 print(f'-{p:<100}:\n\t[{", ".join(key_suffixes)}]')
 
         # Group added keys by parent
@@ -174,16 +199,16 @@ class diff_get:
                 if p not in added_by_parent:
                     added_by_parent[p] = []
                 added_by_parent[p].append(key)
-            
-            print('ADDED KEYS:')
+
+            print("ADDED KEYS:")
             for p, keys in sorted(added_by_parent.items(), key=lambda x: -len(x[1])):
-                key_suffixes = [k.replace(p, "").lstrip('.') for k in keys]
+                key_suffixes = [k.replace(p, "").lstrip(".") for k in keys]
                 print(f'-{p:<100}:\n\t[{", ".join(key_suffixes)}]')
 
         # 4. Loop through the groups of parent keys and print the differences side by side
         print(f"{'KEY':<50} | {'s0':^30} | {'s1':^30} | {'DIFF':>10} | {'% DIFF':>10}")
-        print('-' * 145)
-        threshold = 1.0 / (10 ** self.deep_diff_kw.get('significant_digits', 3))
+        print("-" * 145)
+        threshold = 1.0 / (10 ** self.deep_diff_kw.get("significant_digits", 3))
         for p, _ in sorted_parents:
             group = [k for k in diff_keys if parent_key(k) == p]
             if not group:
@@ -191,11 +216,11 @@ class diff_get:
             group_print = False
             for k in sorted(group):
                 if not self.ignore_added and k not in flat0:
-                    continue 
+                    continue
                 v0 = flat0.get(k, "<MISSING>")
                 v1 = flat1.get(k, "<MISSING>")
-                key = k.replace(p,"")
-                if key.startswith('.'):
+                key = k.replace(p, "")
+                if key.startswith("."):
                     key = key[1:]
                 pct = None
                 v0_num = None
@@ -209,54 +234,65 @@ class diff_get:
                     v1_num = float(v1)
                 except (ValueError, TypeError):
                     pass
-                diff = '-'
+                diff = "-"
                 if v0_num is not None and v1_num is not None:
                     try:
                         if v0_num == 0 and v1_num == 0:
                             pct = 0.0
                         elif v0_num == 0:
-                            pct = float('inf')
+                            pct = float("inf")
                             diff = pct
                         else:
-                            diff = (v1_num - v0_num)
-                            pct = abs( diff/ v0_num)
+                            diff = v1_num - v0_num
+                            pct = abs(diff / v0_num)
                         pct_diff = f"{pct:10.3%}"
                     except Exception:
                         pass
-                v0s = json.dumps(v0, ensure_ascii=False) if not isinstance(v0, str) else v0
-                v1s = json.dumps(v1, ensure_ascii=False) if not isinstance(v1, str) else v1
+                v0s = (
+                    json.dumps(v0, ensure_ascii=False)
+                    if not isinstance(v0, str)
+                    else v0
+                )
+                v1s = (
+                    json.dumps(v1, ensure_ascii=False)
+                    if not isinstance(v1, str)
+                    else v1
+                )
                 if pct is not None and abs(pct) > threshold:
                     if group_print is False:
                         print(f"\nGROUP: {p}")
                         group_print = True
-                    print(f" >{key:<50} | {v0s:^30} | {v1s:^30} | {diff:>14.4f} |{pct_diff:>10}")
+                    print(
+                        f" >{key:<50} | {v0s:^30} | {v1s:^30} | {diff:>14.4f} |{pct_diff:>10}"
+                    )
                 elif pct is None and v0 != v1:
                     if group_print is False:
                         print(f"\nGROUP: {p}")
-                        group_print = True                    
-                    print(f" >{key:<50} | {v0s:^30} | {v1s:^30} | {'-':^14} | {'-':^10}")
+                        group_print = True
+                    print(
+                        f" >{key:<50} | {v0s:^30} | {v1s:^30} | {'-':^14} | {'-':^10}"
+                    )
 
-    def diff_summary(self,file=None,top=50,bytes=None):
+    def diff_summary(self, file=None, top=50, bytes=None):
 
         if file is None:
             file = sys.stdout
             bytes = False
         elif bytes is None:
-            if hasattr(file, 'mode'):
-                bytes = 'b' in file.mode
+            if hasattr(file, "mode"):
+                bytes = "b" in file.mode
             else:
                 # Fallback: check if file expects bytes by writing a test string
                 try:
-                    file.write(b'')  # Try writing empty bytes
+                    file.write(b"")  # Try writing empty bytes
                     bytes = True
                 except TypeError:
                     bytes = False
 
-
         df = self.diff_obj
 
-        title = f'{self.location} diffing summary\n\n'
-        file.write(title.encode('utf-8') if bytes else title)
+        title = f"{self.location} diffing summary\n\n"
+        file.write(title.encode("utf-8") if bytes else title)
         uuid_word = re.compile(
             "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
         )
@@ -265,63 +301,72 @@ class diff_get:
         key_counts = {}
         all_sys_keys = set()
         sys_keys = {}
-        for gk,cats in df.items():
-            if isinstance(cats,dict):
+        for gk, cats in df.items():
+            if isinstance(cats, dict):
                 cats = list(cats.keys())
-            sys_kf = [re.sub(csv_word,"<CSV>",re.sub(uuid_word, "<UUID>", v)) for v in cats]
-            sys_refs = [tuple(c.replace("']","").replace('root.','').split("['")) for c in sys_kf]
-            kc = key_counts.get(gk,{})
+            sys_kf = [
+                re.sub(csv_word, "<CSV>", re.sub(uuid_word, "<UUID>", v)) for v in cats
+            ]
+            sys_refs = [
+                tuple(c.replace("']", "").replace("root.", "").split("['"))
+                for c in sys_kf
+            ]
+            kc = key_counts.get(gk, {})
             for grps in sys_refs:
                 L = len(grps)
-                for i in range(L-1):
-                    wrds = tuple(grps[:L+1-i])
+                for i in range(L - 1):
+                    wrds = tuple(grps[: L + 1 - i])
                     all_sys_keys.add(wrds)
-                    seg_key = '.'.join(wrds)
-                    kc[seg_key] = kc.get(seg_key,0) + 1
-        
+                    seg_key = ".".join(wrds)
+                    kc[seg_key] = kc.get(seg_key, 0) + 1
+
             key_counts[gk] = kc
-        
-        for k,v in key_counts.items():
-            v = sorted(v.items(),key=lambda kv: kv[-1])
+
+        for k, v in key_counts.items():
+            v = sorted(v.items(), key=lambda kv: kv[-1])
             tc = sum([vi[-1] for vi in v])
-            t = f'{k.upper():<100}|{tc}\n'
-            file.write(t.encode('utf-8') if bytes else t)
-            for key,num in v[-top:]:
-                f = f'{key:<100}|{num}\n'
-                file.write(f.encode('utf-8') if bytes else f)
-            file.write(('\n'*2).encode('utf-8') if bytes else '\n'*2)
+            t = f"{k.upper():<100}|{tc}\n"
+            file.write(t.encode("utf-8") if bytes else t)
+            for key, num in v[-top:]:
+                f = f"{key:<100}|{num}\n"
+                file.write(f.encode("utf-8") if bytes else f)
+            file.write(("\n" * 2).encode("utf-8") if bytes else "\n" * 2)
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Diff two JSON files and navigate to a specific path.")
+    parser = argparse.ArgumentParser(
+        description="Diff two JSON files and navigate to a specific path."
+    )
     parser.add_argument("file1", help="First JSON file")
     parser.add_argument("file2", help="Second JSON file")
-    parser.add_argument("path", help="Dot-separated path to navigate in the JSON structure")
+    parser.add_argument(
+        "path", help="Dot-separated path to navigate in the JSON structure"
+    )
 
     args = parser.parse_args()
 
-    with open(args.file1, 'r', encoding='utf-8') as f:
+    with open(args.file1, "r", encoding="utf-8") as f:
         s0 = json.load(f)
-    with open(args.file2, 'r', encoding='utf-8') as f:
+    with open(args.file2, "r", encoding="utf-8") as f:
         s1 = json.load(f)
 
     DIFF = diff_get(s0, s1)
-    keys = args.path.split('.')
+    keys = args.path.split(".")
     try:
         for key in keys:
-            if key.endswith(']') and '[' in key:
-                base, idx = key.rsplit('[', 1)
+            if key.endswith("]") and "[" in key:
+                base, idx = key.rsplit("[", 1)
                 idx = int(idx[:-1])
                 DIFF = DIFF[base]
                 loc = DIFF.loc.copy()
-                loc.append(f'[{idx}]')
-                DIFF = diff_get(DIFF.s0[idx],DIFF.s1[idx],loc=loc)
+                loc.append(f"[{idx}]")
+                DIFF = diff_get(DIFF.s0[idx], DIFF.s1[idx], loc=loc)
                 continue
             else:
                 DIFF = DIFF[key]
 
         print(DIFF)
-        
+
     except KeyError:
         # diff_data already prints to stdout in __getitem__ on KeyError
         pass
