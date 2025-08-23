@@ -124,6 +124,9 @@ class diff_get:
         if file is None:
             file = sys.stdout
             bytes = False
+        else:
+            # Determine if file expects bytes or text
+            bytes = hasattr(file, 'mode') and 'b' in file.mode
 
         title = f"{self.location} diffing data\n\n"
         file.write(title.encode("utf-8") if bytes else title)
