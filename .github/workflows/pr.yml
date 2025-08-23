@@ -83,7 +83,7 @@ jobs:
       - name: Test installation
         run: |
           python -c "import diffgetr; print('Package imported successfully')"
-          diffgetr --help || echo "CLI help command executed"
+          python -c "from diffgetr.diff_get import main; print('CLI function available')"
       
       - name: Run unit tests
         run: |

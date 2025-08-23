@@ -371,5 +371,5 @@ def main():
         # diff_data already prints to stdout in __getitem__ on KeyError
         pass
 
-    if __name__ == "__main__":
-        main()
+if __name__ == "__main__":
+    main()
