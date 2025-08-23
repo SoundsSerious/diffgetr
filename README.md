@@ -203,6 +203,22 @@ diff.diff_sidebyside()
 # - .version                       | "1.2.3"                      | "1.3.0"
 ```
 
+## Testing
+
+Run the comprehensive test suite to verify functionality:
+
+```bash
+python -m unittest discover tests -v
+```
+
+The test suite covers:
+• Core diff functionality and navigation through nested structures
+• Multiple output formats (summary, detailed, side-by-side)
+• Pattern recognition for UUIDs and CSV-like data
+• Error handling and edge cases
+• IPython integration and tab completion
+• Command-line interface functionality
+
 ## Contributing
 
 This tool is part of the SMART_X project ecosystem. When contributing:

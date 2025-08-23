@@ -1,10 +1,10 @@
-import pytest
+import unittest
 import json
 import io
 from diffgetr.diff_get import diff_get
 
 
-class TestDiffGet:
+class TestDiffGet(unittest.TestCase):
     
     def test_basic_diff(self):
         """Test basic diff functionality"""
@@ -82,10 +82,10 @@ class TestDiffGet:
         
         diff = diff_get(s0, s1)
         
-        with pytest.raises(KeyError) as exc_info:
+        with self.assertRaises(KeyError) as context:
             diff['a']['nonexistent']
         
-        assert "key missing: nonexistent" in str(exc_info.value)
+        self.assertIn("key missing: nonexistent", str(context.exception))
     
     def test_string_representation(self):
         """Test string representation of diff object"""
@@ -139,7 +139,7 @@ class TestDiffGet:
     
     def test_type_assertion(self):
         """Test that different types raise assertion error"""
-        with pytest.raises(AssertionError):
+        with self.assertRaises(AssertionError):
             diff_get({"a": 1}, ["a", 1])
     
     def test_ipython_key_completions(self):
@@ -154,15 +154,15 @@ class TestDiffGet:
         assert isinstance(completions, list)
 
 
-class TestCLI:
+class TestCLI(unittest.TestCase):
     
     def test_main_function_exists(self):
         """Test that main function exists and is callable"""
         from diffgetr.diff_get import main
-        assert callable(main)
+        self.assertTrue(callable(main))
 
 
-class TestPatternRecognition:
+class TestPatternRecognition(unittest.TestCase):
     
     def test_uuid_pattern_replacement(self):
         """Test UUID pattern recognition in diff summary"""
@@ -176,3 +176,36 @@ class TestPatternRecognition:
         
         # UUIDs should be abstracted in the summary
         assert "UUID" in summary or summary  # At minimum should not crash
+
+
+if __name__ == "__main__":
+    import sys
+    import traceback
+    
+    # Simple test runner
+    test_classes = [TestDiffGet, TestCLI, TestPatternRecognition]
+    total_tests = 0
+    passed_tests = 0
+    
+    for test_class in test_classes:
+        instance = test_class()
+        methods = [m for m in dir(instance) if m.startswith('test_')]
+        
+        for method_name in methods:
+            total_tests += 1
+            try:
+                method = getattr(instance, method_name)
+                method()
+                print(f"✅ {test_class.__name__}.{method_name}")
+                passed_tests += 1
+            except Exception as e:
+                print(f"❌ {test_class.__name__}.{method_name}: {e}")
+                traceback.print_exc()
+    
+    print(f"\n🏆 SUMMARY: {passed_tests}/{total_tests} tests passed")
+    if passed_tests == total_tests:
+        print("✅ ALL TESTS PASSED")
+        sys.exit(0)
+    else:
+        print("❌ SOME TESTS FAILED")
+        sys.exit(1)

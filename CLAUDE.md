@@ -15,8 +15,23 @@ pip install .
 # Install in development mode 
 pip install -e .
 
+# Install development dependencies
+pip install -e ".[dev]"
+
 # Test the command line tool
 diffgetr file1.json file2.json path.to.key
+```
+
+## Testing Commands
+
+```bash
+# Run unit tests
+python -m unittest discover tests -v
+
+# Build and test package
+python -m build
+pip install dist/*.whl
+python -c "import diffgetr; print('Package imported successfully')"
 ```
 
 ## Core Architecture
